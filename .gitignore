@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+.env
+*.pkl
+loan_dataset_100k.csv
