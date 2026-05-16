@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LoanIQ — Explainable Loan Approval System</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg-base:     #0d1117;
+      --bg-surface:  #161b27;
+      --bg-card:     #1c2333;
+      --bg-input:    #141922;
+      --border:      #2a3448;
+      --gold:        #c9a84c;
+      --gold-light:  #e8c96a;
+      --green:       #2dd4a0;
+      --green-bg:    rgba(45,212,160,0.10);
+      --red:         #f2555a;
+      --red-bg:      rgba(242,85,90,0.10);
+      --text:        #e8edf5;
+      --text-sec:    #8a9bb5;
+      --text-muted:  #4e5e78;
+      --radius:      14px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 15px; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-base);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .app-wrapper {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 24px 48px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 26px 0 22px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+
+    .logo-text { font-family: 'DM Serif Display', serif; font-size: 1.7rem; }
+    .logo-text span { color: var(--gold); }
+
+    .header-badge {
+      font-size: 0.72rem; font-weight: 500; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-muted);
+      background: var(--bg-card); border: 1px solid var(--border);
+      padding: 5px 14px; border-radius: 999px;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 440px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.1rem;
+      margin-bottom: 18px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .section-label {
+      font-size: 0.68rem; font-weight: 600; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-muted);
+      margin: 16px 0 10px;
+    }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .form-grid.single { grid-template-columns: 1fr; }
+    .span2 { grid-column: span 2; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+
+    label { font-size: 0.74rem; font-weight: 500; color: var(--text-sec); }
+
+    input[type="number"], select {
+      background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 0.87rem;
+      padding: 9px 12px; outline: none; width: 100%;
+      appearance: none; -webkit-appearance: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus { border-color: var(--gold); }
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a9bb5' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 30px; cursor: pointer;
+    }
+
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 13px; background: var(--bg-input);
+      border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    .tl-main { font-size: 0.84rem; font-weight: 500; }
+    .tl-sub  { font-size: 0.69rem; color: var(--text-muted); margin-top: 2px; }
+
+    .switch { position: relative; width: 42px; height: 23px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+
+    .slider {
+      position: absolute; inset: 0;
+      background: var(--border); border-radius: 999px; transition: background 0.2s;
+    }
+
+    .slider::before {
+      content: ''; position: absolute;
+      width: 17px; height: 17px; left: 3px; top: 3px;
+      background: var(--text-sec); border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .switch input:checked + .slider { background: var(--green); }
+    .switch input:checked + .slider::before { transform: translateX(19px); background: #fff; }
+
+    .btn-submit {
+      width: 100%; margin-top: 18px; padding: 13px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      color: #0d1117; font-family: 'DM Sans', sans-serif;
+      font-size: 0.92rem; font-weight: 700; border: none;
+      border-radius: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(0,0,0,0.2); border-top-color: #000;
+      border-radius: 50%; animation: spin 0.7s linear infinite; display: none;
+    }
+
+    .btn-submit.loading .spinner { display: block; }
+    .btn-submit.loading .btn-label { display: none; }
+
+    .idle-state { padding: 48px 20px; text-align: center; color: var(--text-muted); }
+    .idle-icon  { font-size: 36px; margin-bottom: 12px; }
+    .idle-title { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--text-sec); }
+
+    .verdict-card { display: none; }
+    .verdict-card.visible { display: block; }
+    .verdict-card.approved { border-color: rgba(45,212,160,0.5); }
+    .verdict-card.rejected { border-color: rgba(242,85,90,0.5); }
+
+    .verdict-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: 999px;
+      font-size: 0.88rem; font-weight: 600; margin-bottom: 20px;
+    }
+
+    .verdict-tag.approved { background: var(--green-bg); color: var(--green); border: 1px solid rgba(45,212,160,0.3); }
+    .verdict-tag.rejected { background: var(--red-bg);   color: var(--red);   border: 1px solid rgba(242,85,90,0.3); }
+
+    .gauge-row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+
+    .gauge-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+    .gauge-svg  { transform: rotate(-90deg); width: 120px; height: 120px; }
+    .gauge-track { fill: none; stroke: var(--bg-surface); stroke-width: 10; }
+    .gauge-fill  {
+      fill: none; stroke-width: 10; stroke-linecap: round;
+      stroke-dasharray: 313.65; stroke-dashoffset: 313.65;
+      transition: stroke-dashoffset 1.3s cubic-bezier(0.4,0,0.2,1), stroke 0.3s;
+    }
+
+    .gauge-center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+
+    .gauge-pct { font-family: 'DM Serif Display', serif; font-size: 1.8rem; line-height: 1; }
+    .gauge-sub { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; min-width: 200px; }
+
+    .stat-box { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+    .stat-label { font-size: 0.70rem; color: var(--text-muted); margin-bottom: 3px; }
+    .stat-value { font-size: 0.92rem; font-weight: 600; }
+
+    .explain-grid { display: none; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .explain-grid.visible { display: grid; }
+
+    @media (max-width: 780px) { .explain-grid { grid-template-columns: 1fr; } }
+
+    .shap-wrap { position: relative; height: 230px; }
+
+    .lime-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 9px 12px; background: var(--bg-surface);
+      border: 1px solid var(--border); border-radius: 8px;
+      margin-bottom: 8px; font-size: 0.80rem; color: var(--text-sec); line-height: 1.5;
+    }
+
+    .cf-card  { display: none; }
+    .cf-card.visible { display: block; }
+
+    .cf-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 14px;
+      background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 10px; margin-bottom: 10px;
+      font-size: 0.82rem; color: var(--text-sec); line-height: 1.5;
+    }
+
+    .cf-num {
+      width: 24px; height: 24px;
+      background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.4);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem; font-weight: 700; color: var(--gold); flex-shrink: 0;
+    }
+
+    .cf-item strong { color: var(--gold-light); }
+
+    /* ── BANK SECTION ── */
+    .bank-card { display: none; }
+    .bank-card.visible { display: block; }
+
+    .bank-subsection-label {
+      font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; margin: 14px 0 10px;
+    }
+
+    .bank-subsection-label.eligible       { color: var(--green); }
+    .bank-subsection-label.rejected-label { color: var(--red); }
+
+    .bank-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-radius: 10px; margin-bottom: 9px;
+      flex-wrap: wrap; gap: 8px;
+    }
+
+    .bank-item.eligible-bank {
+      background: var(--green-bg);
+      border: 1px solid rgba(45,212,160,0.25);
+    }
+
+    .bank-item.rejected-bank {
+      background: var(--red-bg);
+      border: 1px solid rgba(242,85,90,0.2);
+      opacity: 0.75;
+    }
+
+    .bank-name { font-weight: 600; font-size: 0.90rem; display: flex; align-items: center; gap: 7px; }
+    .bank-name.eligible-bank-name { color: var(--green); }
+    .bank-name.rejected-bank-name { color: var(--red); }
+
+    .bank-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .bank-meta-item {
+      font-size: 0.74rem; color: var(--text-sec);
+      background: var(--bg-surface); padding: 3px 10px;
+      border-radius: 999px; border: 1px solid var(--border);
+    }
+
+    .no-banks-msg {
+      font-size: 0.82rem; color: var(--text-muted);
+      padding: 14px; text-align: center;
+      background: var(--bg-surface); border-radius: 8px;
+      border: 1px dashed var(--border);
+    }
+
+    .error-banner {
+      display: none; padding: 11px 14px;
+      background: var(--red-bg); border: 1px solid rgba(242,85,90,0.3);
+      border-radius: 8px; color: var(--red); font-size: 0.80rem; margin-bottom: 16px;
+    }
+
+    .error-banner.visible { display: flex; gap: 8px; align-items: center; }
+
+    .footer {
+      margin-top: 40px; text-align: center;
+      font-size: 0.72rem; color: var(--text-muted);
+      border-top: 1px solid var(--border); padding-top: 24px;
+    }
+
+    @keyframes spin    { to { transform: rotate(360deg); } }
+    @keyframes fadeUp  { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+    .animate-in { animation: fadeUp 0.4s ease both; }
+
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .span2 { grid-column: span 1; }
+      .app-wrapper { padding: 0 14px 32px; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="app-wrapper">
+
+  <header class="header">
+    <div class="logo-text">Loan<span>IQ</span></div>
+    <div class="header-badge">Explainable AI · Credit Intelligence</div>
+  </header>
+
+  <div class="main-grid">
+
+    <!-- ══ LEFT: FORM ══ -->
+    <div>
+      <div class="card">
+        <div class="card-title">📋 Loan Application</div>
+        <form id="loanForm" novalidate>
+
+          <div class="section-label">Financial Details</div>
+          <div class="form-grid">
+
+            <div class="field">
+              <label>Applicant Income (₹/mo)</label>
+              <input type="number" id="applicant_income" placeholder="e.g. 65000" required />
+            </div>
+
+            <div class="field">
+              <label>Co-applicant Income (₹/mo)</label>
+              <input type="number" id="coapplicant_income" placeholder="e.g. 30000" value="0" />
+            </div>
+
+            <div class="field">
+              <label>Loan Amount (₹)</label>
+              <input type="number" id="loan_amount" placeholder="e.g. 1500000" required />
+            </div>
+
+            <div class="field">
+              <label>Loan Duration (months)</label>
+              <input type="number" id="loan_duration" placeholder="e.g. 60" required />
+            </div>
+
+            <div class="field">
+              <label>Credit Score (300–900)</label>
+              <input type="number" id="credit_score" placeholder="e.g. 720" required />
+            </div>
+
+            <div class="field">
+              <label>DTI Ratio (0.0–1.0)</label>
+              <input type="number" id="dti_ratio" step="0.01" placeholder="e.g. 0.35" required />
+            </div>
+
+            <div class="field">
+              <label>Savings Balance (₹)</label>
+              <input type="number" id="savings_balance" placeholder="e.g. 300000" required />
+            </div>
+
+            <div class="field">
+              <label>Interest Rate (%)</label>
+              <input type="number" id="interest_rate" step="0.01" placeholder="e.g. 10.5" required />
+            </div>
+
+            <div class="field span2">
+              <label>Age</label>
+              <input type="number" id="age" placeholder="e.g. 32" required />
+            </div>
+
+          </div>
+
+          <hr />
+
+          <div class="section-label">Applicant Profile</div>
+          <div class="form-grid">
+
+            <div class="field">
+              <label>Employment Status</label>
+              <select id="employment_status">
+                <option value="Employed">Employed</option>
+                <option value="Self-employed">Self-employed</option>
+                <option value="Unemployed">Unemployed</option>
+                <option value="Student">Student</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Education Level</label>
+              <select id="education_level">
+                <option value="High School">High School</option>
+                <option value="Graduate">Graduate</option>
+                <option value="Postgraduate">Postgraduate</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Residence Type</label>
+              <select id="residence_type">
+                <option value="Owned">Owned</option>
+                <option value="Rented">Rented</option>
+                <option value="Mortgage">Mortgage</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Loan Purpose</label>
+              <select id="loan_purpose">
+                <option value="Home">Home</option>
+                <option value="Car">Car</option>
+                <option value="Education">Education</option>
+                <option value="Business">Business</option>
+                <option value="Personal">Personal</option>
+              </select>
+            </div>
+
+            <div class="field span2">
+              <label>Marital Status</label>
+              <select id="marital_status">
+                <option value="Single">Single</option>
+                <option value="Married">Married</option>
+                <option value="Divorced">Divorced</option>
+              </select>
+            </div>
+
+          </div>
+
+          <hr />
+
+          <div class="section-label">Credit Flags</div>
+          <div class="form-grid single">
+
+            <label class="toggle-row" for="credit_history">
+              <div>
+                <div class="tl-main">Credit History</div>
+                <div class="tl-sub" id="credit_history_sub">Currently: Bad / No History</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="credit_history" />
+                <span class="slider"></span>
+              </label>
+            </label>
+
+            <label class="toggle-row" for="previous_default">
+              <div>
+                <div class="tl-main">Previous Default</div>
+                <div class="tl-sub" id="previous_default_sub">Currently: No Default</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="previous_default" />
+                <span class="slider"></span>
+              </label>
+            </label>
+
+          </div>
+
+          <button type="submit" class="btn-submit" id="submitBtn">
+            <div class="spinner"></div>
+            <span class="btn-label">⚡ Check Loan Approval</span>
+          </button>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: OUTPUT ══ -->
+    <div id="outputPanel">
+
+      <div class="error-banner" id="errorBanner">
+        <span>⚠</span><span id="errorText"></span>
+      </div>
+
+      <div class="card" id="idleCard">
+        <div class="idle-state">
+          <div class="idle-icon">🏦</div>
+          <div class="idle-title">Awaiting Application</div>
+          <p style="color:var(--text-muted);font-size:0.82rem;margin-top:8px;">
+            Fill in the form and submit to receive an AI-powered credit decision with full explainability.
+          </p>
+        </div>
+      </div>
+
+      <div class="card verdict-card animate-in" id="verdictCard">
+        <div class="verdict-tag" id="verdictTag">
+          <span id="verdictText">—</span>
+        </div>
+        <div class="gauge-row">
+          <div class="gauge-wrap">
+            <svg class="gauge-svg" viewBox="0 0 120 120">
+              <circle class="gauge-track" cx="60" cy="60" r="50" />
+              <circle class="gauge-fill" id="gaugeFill" cx="60" cy="60" r="50" />
+            </svg>
+            <div class="gauge-center">
+              <div class="gauge-pct" id="gaugePct">—</div>
+              <div class="gauge-sub">Probability</div>
+            </div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-box">
+              <div class="stat-label">Model Used</div>
+              <div class="stat-value" id="modelName">—</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Credit Score</div>
+              <div class="stat-value" id="statCredit">—</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">DTI Ratio</div>
+              <div class="stat-value" id="statDTI">—</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Loan / Income</div>
+              <div class="stat-value" id="statLIR">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="explain-grid animate-in" id="explainGrid">
+        <div class="card">
+          <div class="card-title">📊 SHAP Feature Impact</div>
+          <div class="shap-wrap">
+            <canvas id="shapChart"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🔍 LIME Explanation</div>
+          <div id="limeList"></div>
+        </div>
+      </div>
+
+      <div class="card cf-card animate-in" id="cfCard">
+        <div class="card-title">🎯 Actionable Recommendations</div>
+        <div id="cfGrid"></div>
+      </div>
+
+      <div class="card bank-card animate-in" id="bankCard">
+        <div class="card-title">🏦 Bank Eligibility</div>
+        <div id="bankGrid"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="footer">LoanIQ · Explainable AI · Powered by ML + SHAP + LIME</footer>
+</div>
+
+<script>
+/* ── MOCK DATA ── */
+const MOCK_APPROVED = {
+  prediction: 1, probability: 0.87, model: "Random Forest",
+  shap_values: { credit_score: 0.42, applicant_income: 0.31, dti_ratio: -0.22, savings_balance: 0.18, loan_amount: -0.15, credit_history: 0.28, previous_default: -0.05, employment_status: 0.09 },
+  lime_explanation: ["credit_score > 700 — positive influence (+0.42)", "savings_balance is strong — positive influence (+0.18)", "employment_status = Employed — positive influence (+0.09)", "dti_ratio within acceptable range (+0.07)", "loan_amount within income range (+0.05)"],
+  counterfactuals: [],
+  eligible_banks: [
+    { bank: "SBI",   interest_rate: "8.50% - 10.15%", wait_period: "Immediate" },
+    { bank: "HDFC",  interest_rate: "8.70% - 9.95%",  wait_period: "Immediate" },
+    { bank: "ICICI", interest_rate: "8.75% - 10.05%", wait_period: "Immediate" }
+  ],
+  rejected_banks: ["Kotak"]
+};
+
+const MOCK_REJECTED = {
+  prediction: 0, probability: 0.22, model: "Random Forest",
+  shap_values: { credit_score: -0.45, dti_ratio: -0.38, previous_default: -0.52, loan_amount: -0.20, credit_history: -0.35, applicant_income: 0.10 },
+  lime_explanation: ["previous_default = Yes — strong negative influence (-0.52)", "credit_history = Bad — negative influence (-0.35)", "credit_score < 500 — negative influence (-0.45)", "dti_ratio > 0.60 — high financial stress (-0.38)", "loan_amount too high relative to income (-0.20)"],
+  counterfactuals: [
+    "Increase Credit Score by <strong>170 points</strong> (current: 480, target: 650+)",
+    "Resolve <strong>previous default record</strong> — on-time payments for 12+ months",
+    "Reduce DTI Ratio from <strong>0.72 → 0.45</strong> by paying down existing loans",
+    "Reduce Loan Amount to below <strong>₹12,00,000</strong> based on your income"
+  ],
+  eligible_banks: [],
+  rejected_banks: ["SBI", "HDFC", "ICICI", "Axis", "Kotak"]
+};
+
+/* ── TOGGLE LABELS ── */
+document.getElementById('credit_history').addEventListener('change', function () {
+  document.getElementById('credit_history_sub').textContent =
+    this.checked ? 'Currently: Good Credit History' : 'Currently: Bad / No History';
+});
+
+document.getElementById('previous_default').addEventListener('change', function () {
+  document.getElementById('previous_default_sub').textContent =
+    this.checked ? 'Currently: Has Previous Default' : 'Currently: No Default';
+});
+
+/* ── COLLECT FORM ── */
+function collectFormData() {
+  return {
+    applicant_income:   parseFloat(document.getElementById('applicant_income').value)   || 0,
+    coapplicant_income: parseFloat(document.getElementById('coapplicant_income').value) || 0,
+    loan_amount:        parseFloat(document.getElementById('loan_amount').value)         || 0,
+    loan_duration:      parseInt(document.getElementById('loan_duration').value)         || 0,
+    credit_score:       parseInt(document.getElementById('credit_score').value)          || 0,
+    dti_ratio:          parseFloat(document.getElementById('dti_ratio').value)           || 0,
+    savings_balance:    parseFloat(document.getElementById('savings_balance').value)     || 0,
+    interest_rate:      parseFloat(document.getElementById('interest_rate').value)       || 0,
+    age:                parseInt(document.getElementById('age').value)                   || 0,
+    employment_status:  document.getElementById('employment_status').value,
+    education_level:    document.getElementById('education_level').value,
+    residence_type:     document.getElementById('residence_type').value,
+    loan_purpose:       document.getElementById('loan_purpose').value,
+    marital_status:     document.getElementById('marital_status').value,
+    credit_history:     document.getElementById('credit_history').checked ? 1 : 0,
+    previous_default:   document.getElementById('previous_default').checked ? 1 : 0
+  };
+}
+
+/* ── VALIDATE ── */
+function validate(d) {
+  if (!d.applicant_income)  return 'Applicant Income is required';
+  if (!d.loan_amount)       return 'Loan Amount is required';
+  if (!d.loan_duration)     return 'Loan Duration is required';
+  if (!d.credit_score)      return 'Credit Score is required';
+  if (!d.dti_ratio)         return 'DTI Ratio is required';
+  if (!d.interest_rate)     return 'Interest Rate is required';
+  if (!d.age)               return 'Age is required';
+  if (d.credit_score < 300 || d.credit_score > 900) return 'Credit Score must be 300–900';
+  if (d.dti_ratio < 0 || d.dti_ratio > 1)           return 'DTI Ratio must be 0.0–1.0';
+  if (d.age < 18 || d.age > 75)                      return 'Age must be 18–75';
+  return null;
+}
+
+/* ── BACKEND CALL ── */
+async function callPredict(payload) {
+  const res = await fetch('/predict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(12000)
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+/* ── GAUGE ── */
+function animateGauge(prob, approved) {
+  const circle = document.getElementById('gaugeFill');
+  const pctEl  = document.getElementById('gaugePct');
+  const circ   = 313.65;
+  circle.style.stroke = approved ? '#2dd4a0' : '#f2555a';
+  circle.style.strokeDashoffset = circ;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    circle.style.strokeDashoffset = circ * (1 - prob);
+  }));
+  let cur = 0;
+  const target = Math.round(prob * 100);
+  const timer = setInterval(() => {
+    cur = Math.min(cur + Math.ceil(target / 50), target);
+    pctEl.textContent = cur + '%';
+    if (cur >= target) clearInterval(timer);
+  }, 20);
+}
+
+/* ── SHAP ── */
+let shapInstance = null;
+
+function renderSHAP(shapValues) {
+  const sorted = Object.entries(shapValues).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0,8);
+  const labels  = sorted.map(([k]) => k.replace(/_/g,' ').replace(/\b\w/g, l => l.toUpperCase()));
+  const values  = sorted.map(([,v]) => v);
+  const colors  = values.map(v => v >= 0 ? 'rgba(45,212,160,0.75)' : 'rgba(242,85,90,0.75)');
+  const borders = values.map(v => v >= 0 ? '#2dd4a0' : '#f2555a');
+  const ctx = document.getElementById('shapChart').getContext('2d');
+  if (shapInstance) shapInstance.destroy();
+  shapInstance = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: borders, borderWidth: 1.5, borderRadius: 4 }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1c2333', borderColor: '#2a3448', borderWidth: 1,
+          titleColor: '#e8edf5', bodyColor: '#8a9bb5',
+          callbacks: { label: ctx => ` SHAP: ${ctx.raw.toFixed(3)}  ${ctx.raw > 0 ? '▲ Positive' : '▼ Negative'}` }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(42,52,72,0.5)' }, ticks: { color: '#6b7d9c', font: { size: 10 } }, border: { color: '#2a3448' } },
+        y: { grid: { display: false }, ticks: { color: '#8a9bb5', font: { size: 11 } }, border: { color: '#2a3448' } }
+      }
+    }
+  });
+}
+
+/* ── LIME ── */
+function renderLIME(explanations) {
+  const list = document.getElementById('limeList');
+  list.innerHTML = '';
+  explanations.forEach(text => {
+    const isPos = /positively|good|strong|above|support/i.test(text);
+    const isNeg = /negatively|low|high|exceed|below|default|bad/i.test(text);
+    const div = document.createElement('div');
+    div.className = 'lime-item';
+    div.innerHTML = `<span>${isPos ? '✅' : isNeg ? '❌' : '📌'}</span><span>${text}</span>`;
+    list.appendChild(div);
+  });
+}
+
+/* ── COUNTERFACTUALS ── */
+function renderCounterfactuals(cfs) {
+  const grid = document.getElementById('cfGrid');
+  const card = document.getElementById('cfCard');
+  grid.innerHTML = '';
+  if (!cfs || cfs.length === 0) { card.classList.remove('visible'); return; }
+  cfs.forEach((text, i) => {
+    const div = document.createElement('div');
+    div.className = 'cf-item';
+    div.innerHTML = `<div class="cf-num">${i+1}</div><div>${text}</div>`;
+    grid.appendChild(div);
+  });
+  card.classList.add('visible');
+}
+
+/* ── BANKS ── */
+function renderBanks(eligible, rejected) {
+  const grid = document.getElementById('bankGrid');
+  const card = document.getElementById('bankCard');
+  grid.innerHTML = '';
+
+  if (eligible && eligible.length > 0) {
+    const lbl = document.createElement('div');
+    lbl.className = 'bank-subsection-label eligible';
+    lbl.textContent = `✅ Eligible Banks (${eligible.length})`;
+    grid.appendChild(lbl);
+    eligible.forEach(b => {
+      const div = document.createElement('div');
+      div.className = 'bank-item eligible-bank';
+      div.innerHTML = `
+        <div class="bank-name eligible-bank-name">🏦 ${b.bank}</div>
+        <div class="bank-meta">
+          <span class="bank-meta-item">📈 ${b.interest_rate}</span>
+          <span class="bank-meta-item">⏱ ${b.wait_period}</span>
+        </div>`;
+      grid.appendChild(div);
+    });
+  } else {
+    const msg = document.createElement('div');
+    msg.className = 'no-banks-msg';
+    msg.textContent = '⚠ No banks eligible based on current profile.';
+    grid.appendChild(msg);
+  }
+
+  if (rejected && rejected.length > 0) {
+    const lbl = document.createElement('div');
+    lbl.className = 'bank-subsection-label rejected-label';
+    lbl.textContent = `❌ Not Eligible (${rejected.length})`;
+    grid.appendChild(lbl);
+    rejected.forEach(name => {
+      const div = document.createElement('div');
+      div.className = 'bank-item rejected-bank';
+      div.innerHTML = `<div class="bank-name rejected-bank-name">🏦 ${name}</div>
+                       <div class="bank-meta"><span class="bank-meta-item">Does not meet criteria</span></div>`;
+      grid.appendChild(div);
+    });
+  }
+
+  card.classList.add('visible');
+}
+
+/* ── RENDER ALL ── */
+function renderResult(response, formData) {
+  const approved = response.prediction === 1;
+  const prob = Math.min(Math.max(response.probability, 0), 1);
+
+  document.getElementById('idleCard').style.display = 'none';
+
+  const vc = document.getElementById('verdictCard');
+  vc.className = `card verdict-card visible animate-in ${approved ? 'approved' : 'rejected'}`;
+
+  const tag = document.getElementById('verdictTag');
+  tag.className = `verdict-tag ${approved ? 'approved' : 'rejected'}`;
+  document.getElementById('verdictText').textContent = approved ? '✅  Loan Approved' : '❌  Loan Rejected';
+
+  document.getElementById('modelName').textContent  = response.model || '—';
+  document.getElementById('statCredit').textContent = formData.credit_score;
+  document.getElementById('statDTI').textContent    = (formData.dti_ratio * 100).toFixed(1) + '%';
+  document.getElementById('statLIR').textContent    = formData.applicant_income > 0
+    ? (formData.loan_amount / (formData.applicant_income * 12)).toFixed(2) + '×' : '—';
+
+  animateGauge(prob, approved);
+
+  document.getElementById('explainGrid').classList.add('visible');
+  if (response.shap_values)      renderSHAP(response.shap_values);
+  if (response.lime_explanation) renderLIME(response.lime_explanation);
+  renderCounterfactuals(response.counterfactuals);
+  renderBanks(response.eligible_banks || [], response.rejected_banks || []);
+
+  if (window.innerWidth < 1024) {
+    document.getElementById('outputPanel').scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+/* ── ERROR ── */
+function showError(msg) {
+  const b = document.getElementById('errorBanner');
+  document.getElementById('errorText').textContent = msg;
+  b.classList.add('visible');
+  setTimeout(() => b.classList.remove('visible'), 6000);
+}
+
+/* ── LOADING ── */
+function setLoading(on) {
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = on;
+  btn.classList.toggle('loading', on);
+}
+
+/* ── SUBMIT ── */
+document.getElementById('loanForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const formData = collectFormData();
+  const err = validate(formData);
+  if (err) { showError(err); return; }
+  setLoading(true);
+  document.getElementById('errorBanner').classList.remove('visible');
+  let response;
+  try {
+    response = await callPredict(formData);
+  } catch(ex) {
+    response = (formData.credit_score >= 650 && formData.dti_ratio <= 0.45 &&
+                formData.credit_history === 1 && formData.previous_default === 0)
+               ? MOCK_APPROVED : MOCK_REJECTED;
+    showError('Backend unavailable — showing demo prediction.');
+  }
+  setLoading(false);
+  renderResult(response, formData);
+});
+</script>
+
+</body>
+</html>
